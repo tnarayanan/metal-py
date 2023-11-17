@@ -17,17 +17,17 @@ with open("README.md", "r", encoding="utf-8") as fh:
 def build_swift():
     print("Building swift object files")
     os.system("mkdir -p build/swift")
-    os.system("swiftc -parse-as-library -c src/metalpy.swift -I src -target arm64-apple-macos11 -o build/swift/metalpyswiftarm.a")
-    os.system("swiftc -parse-as-library -c src/metalpy.swift -I src -target x86_64-apple-macos11 -o build/swift/metalpyswiftx64.a")
-    os.system("lipo -create build/swift/metalpyswiftarm.a build/swift/metalpyswiftx64.a -o build/swift/metalpyswift.a")
+    os.system("swiftc -parse-as-library -c src/metal.swift -I src -target arm64-apple-macos11 -o build/swift/metalswiftarm.a")
+    os.system("swiftc -parse-as-library -c src/metal.swift -I src -target x86_64-apple-macos11 -o build/swift/metalswiftx64.a")
+    os.system("lipo -create build/swift/metalswiftarm.a build/swift/metalswiftx64.a -o build/swift/metalswift.a")
 
 class build(build_module.build_ext):
     def run(self):
         build_swift()
         build_module.build_ext.run(self)
 
-setup(name="metalpy",
-    version="0.2.4",
+setup(name="metal",
+    version="1.0.0",
     author="Tejas Narayanan",
     author_email="tejasn100@gmail.com",
     description="A Python library to run Metal compute kernels on macOS",
@@ -47,15 +47,15 @@ setup(name="metalpy",
     python_requires=">=3.8",
     cmdclass = {'build_ext': build,},
     ext_modules=[Extension(
-        'metalpy', 
-        ['src/metalpy.c'], 
+        'metal', 
+        ['src/metal.c'], 
         extra_compile_args=["-mmacosx-version-min=11.0","-arch","arm64","-arch","x86_64","-Wno-unused-command-line-argument"],
         extra_link_args=["-mmacosx-version-min=11.0","-arch","arm64","-arch","x86_64","-Wno-unused-command-line-argument"],
         library_dirs=[".","/usr/lib","/usr/lib/swift"],
         libraries=["swiftFoundation","swiftMetal"],
-        extra_objects=["build/swift/metalpyswift.a"])],
-    scripts=["examples/metalpy-mandelbrot", 
-             "examples/metalpy-measure",
-             "examples/metalpy-raymarch",
-             "examples/metalpy-pipe"]
+        extra_objects=["build/swift/metalswift.a"])],
+    scripts=["examples/metal-mandelbrot", 
+             "examples/metal-measure",
+             "examples/metal-raymarch",
+             "examples/metal-pipe"]
     )
