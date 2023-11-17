@@ -1,5 +1,5 @@
 /*
-metalcompute.c
+metalpy.c
 
 Python extension to use Metal for compute
 
@@ -9,7 +9,7 @@ Python extension to use Metal for compute
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include "metalcompute.h"
+#include "metalpy.h"
 
 // Value symbols are shared with Swift, so declared extern in shared header and defined here
 
@@ -61,7 +61,7 @@ const long FormatF32 = 9;
 const long FormatF64 = 10;
 
 
-static PyObject *MetalComputeError;
+static PyObject *MetalPyError;
 
 RetCode mc_err(RetCode ret) {
     // Map error codes to exception with string
@@ -94,18 +94,18 @@ RetCode mc_err(RetCode ret) {
             case RunNotFound: errString = "Run not found"; break;
             case DeviceBuffersAllocated: errString = "Device closed while buffers still allocated"; break;
             // Python level errors
-            case FirstArgumentNotDevice: errString = "First argument should be a metalcompute.Device object"; break;
-            case FirstArgumentNotKernel: errString = "First argument should be a metalcompute.Kernel object"; break;
+            case FirstArgumentNotDevice: errString = "First argument should be a metalpy.Device object"; break;
+            case FirstArgumentNotKernel: errString = "First argument should be a metalpy.Kernel object"; break;
             case CountNotGiven: errString = "First argument should be an integer kernel count"; break;
             // C level errors below
         }
 
         if (ret == FailedToCompile) {
             char* compileErrString = mc_sw_get_compile_error(); 
-            PyErr_SetString(MetalComputeError, compileErrString);
+            PyErr_SetString(MetalPyError, compileErrString);
             free(compileErrString);
         } else {
-            PyErr_SetString(MetalComputeError, errString);
+            PyErr_SetString(MetalPyError, errString);
         }
 
     }
@@ -338,7 +338,7 @@ Device_dealloc(Device *self)
 static PyObject *
 Device_str(Device* self)
 {
-    return PyUnicode_FromFormat("metalcompute.Device(%s)", self->dev_handle.name);
+    return PyUnicode_FromFormat("metalpy.Device(%s)", self->dev_handle.name);
 }
 
 static PyTypeObject KernelType; // Forward reference
@@ -384,7 +384,7 @@ static PyMethodDef Device_methods[] = {
 
 static PyTypeObject DeviceType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "metalcompute.Device",
+    .tp_name = "metalpy.Device",
     .tp_doc = "A Metal device which can be to allocated buffer, compile and run kernels",
     .tp_basicsize = sizeof(Device),
     .tp_itemsize = 0,
@@ -434,7 +434,7 @@ Kernel_dealloc(Kernel *self)
 static PyObject *
 Kernel_str(Kernel* self)
 {
-    return PyUnicode_FromFormat("metalcompute.Kernel");
+    return PyUnicode_FromFormat("metalpy.Kernel");
 }
 
 static PyTypeObject FunctionType; // Forward reference
@@ -462,7 +462,7 @@ static PyMethodDef Kernel_methods[] = {
 
 static PyTypeObject KernelType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "metalcompute.Kernel",
+    .tp_name = "metalpy.Kernel",
     .tp_doc = "A Metal compute kernel with one or more functions",
     .tp_basicsize = sizeof(Kernel),
     .tp_itemsize = 0,
@@ -512,7 +512,7 @@ Function_dealloc(Function *self)
 static PyObject *
 Function_str(Function* self)
 {
-    return PyUnicode_FromFormat("metalcompute.Function");
+    return PyUnicode_FromFormat("metalpy.Function");
 }
 
 static PyTypeObject RunType; // Forward reference
@@ -527,7 +527,7 @@ Function_call(Function* self, PyObject *args, PyObject *kwargs) {
 
 static PyTypeObject FunctionType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "metalcompute.Function",
+    .tp_name = "metalpy.Function",
     .tp_doc = "A Metal compute kernel function which can be run",
     .tp_basicsize = sizeof(Function),
     .tp_itemsize = 0,
@@ -604,7 +604,7 @@ Buffer_dealloc(Buffer *self)
 static PyObject *
 Buffer_str(Buffer* self)
 {
-    return PyUnicode_FromFormat("metalcompute.Buffer(length=%lld)",self->length);
+    return PyUnicode_FromFormat("metalpy.Buffer(length=%lld)",self->length);
 }
 
 int Buffer_getbuffer(Buffer *self, Py_buffer *view, int flags) {
@@ -637,7 +637,7 @@ static PyBufferProcs BufferProcs = {
 
 static PyTypeObject BufferType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "metalcompute.Buffer",
+    .tp_name = "metalpy.Buffer",
     .tp_doc = "A Metal compute buffer",
     .tp_basicsize = sizeof(Buffer),
     .tp_itemsize = 0,
@@ -651,9 +651,9 @@ static PyTypeObject BufferType = {
 
 int to_buffer(PyObject* possible_buffer, Device* dev, Buffer** buffer) {
     // The input is either
-    // 1. Already a metalcompute Buffer*, if so give and return 0;
+    // 1. Already a metalpy Buffer*, if so give and return 0;
     // 2. A python object which can expose a buffer
-    //    If so create and give a temporary metalcompute buffer with a copy of the data and return 0
+    //    If so create and give a temporary metalpy buffer with a copy of the data and return 0
     // 3. Something else. Return -1
     if (possible_buffer->ob_type == &BufferType) {
         *buffer = (Buffer*)possible_buffer;
@@ -751,12 +751,12 @@ Run_dealloc(Run *self)
 static PyObject *
 Run_str(Run* self)
 {
-    return PyUnicode_FromFormat("metalcompute.Run");
+    return PyUnicode_FromFormat("metalpy.Run");
 }
 
 static PyTypeObject RunType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "metalcompute.Run",
+    .tp_name = "metalpy.Run",
     .tp_doc = "A Metal compute kernel function run",
     .tp_basicsize = sizeof(Run),
     .tp_itemsize = 0,
@@ -768,7 +768,7 @@ static PyTypeObject RunType = {
 };
 
 
-static PyMethodDef MetalComputeMethods[] = {
+static PyMethodDef MetalPyMethods[] = {
     // v0.1 functions - simple/deprecated
     {"init",  mc_py_1_init, METH_VARARGS,
      "init"},
@@ -788,13 +788,13 @@ static PyMethodDef MetalComputeMethods[] = {
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
-static struct PyModuleDef metalcomputemodule = {
+static struct PyModuleDef metalpymodule = {
     PyModuleDef_HEAD_INIT,
-    "metalcompute",   /* name of module */
+    "metalpy",   /* name of module */
     "Run metal compute kernels", /* module documentation, may be NULL */
     -1,       /* size of per-interpreter state of the module,
                  or -1 if the module keeps state in global variables. */
-    MetalComputeMethods
+    MetalPyMethods
 };
 
 void define_device_info_type() {
@@ -806,7 +806,7 @@ void define_device_info_type() {
         { .name=0, .doc=NULL }
     };
     PyStructSequence_Desc dev_item_desc = {
-        .name = "metalcompute_device",
+        .name = "metalpy_device",
         .doc = "",
         .fields = fields,
         .n_in_sequence = 4 };
@@ -814,7 +814,7 @@ void define_device_info_type() {
 }
 
 PyMODINIT_FUNC
-PyInit_metalcompute(void)
+PyInit_metalpy(void)
 {
     //printf("(creating stdout)\n"); // Uncomment if debugging swift code with print statements
 
@@ -835,15 +835,15 @@ PyInit_metalcompute(void)
 
     PyObject *m;
 
-    m = PyModule_Create(&metalcomputemodule);
+    m = PyModule_Create(&metalpymodule);
     if (m == NULL)
         return NULL;
 
-    MetalComputeError = PyErr_NewException("metalcompute.error", NULL, NULL);
-    Py_XINCREF(MetalComputeError);
-    if (PyModule_AddObject(m, "error", MetalComputeError) < 0) {
-        Py_XDECREF(MetalComputeError);
-        Py_CLEAR(MetalComputeError);
+    MetalPyError = PyErr_NewException("metalpy.error", NULL, NULL);
+    Py_XINCREF(MetalPyError);
+    if (PyModule_AddObject(m, "error", MetalPyError) < 0) {
+        Py_XDECREF(MetalPyError);
+        Py_CLEAR(MetalPyError);
         Py_DECREF(m);
         return NULL;
     }
@@ -852,7 +852,7 @@ PyInit_metalcompute(void)
     
     Py_INCREF(&DeviceType);
     if (PyModule_AddObject(m, "Device", (PyObject *) &DeviceType) < 0) {
-        Py_XDECREF(MetalComputeError);
+        Py_XDECREF(MetalPyError);
         Py_DECREF(&DeviceType);
         Py_DECREF(m);
         return NULL;

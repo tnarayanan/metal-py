@@ -1,5 +1,5 @@
 /*
-metalcompute.swift
+metalpy.swift
 
 Swift backend for Python extension to use Metal for compute
 

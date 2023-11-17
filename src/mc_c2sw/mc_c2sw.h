@@ -1,2 +1,2 @@
 // Bridging header between C & Swift
-#include "../metalcompute.h"
+#include "../metalpy.h"
